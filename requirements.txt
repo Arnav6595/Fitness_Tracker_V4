@@ -1,0 +1,39 @@
+# --- Core Flask ---
+Flask==3.1.1
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.1.0
+Flask-RESTful==0.3.10
+Flask-Bcrypt==1.0.1
+flask-cors==6.0.1
+
+# --- Database driver ---
+psycopg2-binary==2.9.10
+
+# --- Environment & AI ---
+python-dotenv==1.1.0
+google-generativeai==0.8.5
+
+# --- Background tasks ---
+APScheduler==3.11.0
+
+# --- SQLAlchemy & ORM ---
+alembic==1.16.4
+SQLAlchemy==2.0.40
+
+# --- Validation & config ---
+pydantic==2.11.7
+pydantic-settings==2.9.1
+email-validator==2.2.0
+
+# --- HTTP ---
+httpx==0.28.1
+python-multipart==0.0.20
+
+# --- Production server ---
+gunicorn==23.0.0
+uvicorn==0.34.3
+
+# --- Testing ---
+pytest==8.4.1
+
+flask-swagger-ui==5.21.0

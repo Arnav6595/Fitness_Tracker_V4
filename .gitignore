@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+*.sqlite3
+
+# Virtual environment
+venv/
+.venv/
+
+# Env variables / secrets
+.env
+
+# IDE/editor configs
+.vscode/
+.idea/
+
+# Logs and temp
+*.log
+*.tmp
+
+# Coverage reports
+.coverage
+htmlcov/
+.cache/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# User files
+*.txt
+!requirements.txt

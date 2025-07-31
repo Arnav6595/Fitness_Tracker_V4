@@ -1,0 +1,478 @@
+openapi: 3.0.3
+info:
+  title: Fitness Tracker API
+  description: The complete API reference for the Fitness Tracker B2B platform. All endpoints are protected and require a valid API key.
+  version: 1.0.0
+
+servers:
+  - url: /api
+    description: API server
+
+# Define security schemes
+security:
+  - ApiKeyAuth: []
+
+# Define reusable components
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    # --- User Schemas ---
+    Membership:
+      type: object
+      properties:
+        plan:
+          type: string
+          example: "Premium"
+        end_date:
+          type: string
+          format: date
+          example: "2026-08-01"
+    UserRegistration:
+      type: object
+      required:
+        - name
+        - age
+        - gender
+        - contact_info
+        - weight_kg
+        - height_cm
+        - fitness_goals
+        - workouts_per_week
+        - workout_duration
+        - sleep_hours
+        - stress_level
+      properties:
+        name:
+          type: string
+          example: "Priya Sharma"
+        age:
+          type: integer
+          example: 29
+        gender:
+          type: string
+          enum: [Male, Female, Other]
+        contact_info:
+          type: string
+          format: email
+          example: "priya.sharma@example.com"
+        weight_kg:
+          type: number
+          example: 62.5
+        height_cm:
+          type: number
+          example: 160.0
+        fitness_goals:
+          type: string
+          example: "Fat loss and Toning"
+        workouts_per_week:
+          type: string
+          example: "3-4"
+        workout_duration:
+          type: integer
+          example: 45
+        sleep_hours:
+          type: string
+          example: "7"
+        stress_level:
+          type: string
+          enum: [low, medium, high]
+        membership:
+          $ref: '#/components/schemas/Membership'
+        disliked_foods:
+          type: string
+          example: "Okra"
+        allergies:
+          type: string
+          example: "None"
+        health_conditions:
+          type: string
+          example: "None"
+
+    # --- Diet Schemas ---
+    Macros:
+      type: object
+      properties:
+        protein_g:
+          type: number
+        carbs_g:
+          type: number
+        fat_g:
+          type: number
+    DietLog:
+      type: object
+      required:
+        - user_id
+        - meal_name
+        - calories
+      properties:
+        user_id:
+          type: integer
+        meal_name:
+          type: string
+        calories:
+          type: integer
+        food_items:
+          type: string
+        macros:
+          $ref: '#/components/schemas/Macros'
+        date:
+          type: string
+          format: date-time
+    GenerateDietPlan:
+      type: object
+      required:
+        - user_id
+        - activityLevel
+        - diet_type
+      properties:
+        user_id:
+          type: integer
+        activityLevel:
+          type: string
+          enum: [sedentary, lightlyActive, moderatelyActive, veryActive, extraActive]
+        diet_type:
+          type: string
+          enum: [veg, non-veg]
+        budget:
+          type: string
+        optional_cuisines:
+          type: array
+          items:
+            type: string
+
+    # --- Workout Schemas ---
+    Exercise:
+      type: object
+      required:
+        - name
+        - sets
+        - reps
+        - weight
+      properties:
+        name:
+          type: string
+        sets:
+          type: integer
+        reps:
+          type: integer
+        weight:
+          type: number
+    WorkoutLog:
+      type: object
+      required:
+        - user_id
+        - name
+        - exercises
+      properties:
+        user_id:
+          type: integer
+        name:
+          type: string
+        date:
+          type: string
+          format: date-time
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/Exercise'
+    GenerateWorkoutPlan:
+      type: object
+      required:
+        - user_id
+        - fitnessLevel
+        - equipment
+      properties:
+        user_id:
+          type: integer
+        fitnessLevel:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        equipment:
+          type: string
+          enum: [bodyweight only, Home gym, Gym access]
+
+    # --- Progress Schemas ---
+    WeightLog:
+      type: object
+      required:
+        - user_id
+        - weight_kg
+      properties:
+        user_id:
+          type: integer
+        weight_kg:
+          type: number
+        date:
+          type: string
+          format: date-time
+    MeasurementLog:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: integer
+        date:
+          type: string
+          format: date-time
+        waist_cm:
+          type: number
+        chest_cm:
+          type: number
+        arms_cm:
+          type: number
+        hips_cm:
+          type: number
+
+# Define API Paths
+paths:
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+      responses:
+        '201':
+          description: User created successfully
+        '400':
+          description: Invalid input
+        '409':
+          description: User already exists
+
+  /diet/generate-plan:
+    post:
+      tags: [Diet]
+      summary: Generate a new diet plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateDietPlan'
+      responses:
+        '200':
+          description: Diet plan generated successfully
+        '400':
+          description: Invalid input
+        '500':
+          description: API key configuration error or generation failed
+
+  /diet/log:
+    post:
+      tags: [Diet]
+      summary: Log a meal for a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DietLog'
+      responses:
+        '201':
+          description: Meal logged successfully
+        '400':
+          description: Invalid input
+
+  /diet/{user_id}/logs:
+    get:
+      tags: [Diet]
+      summary: Get diet history for a user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of diet logs
+        '404':
+          description: User not found
+
+  /diet/{user_id}/weekly-summary:
+    get:
+      tags: [Diet]
+      summary: Get weekly diet summary for a user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Weekly diet summary
+        '404':
+          description: User not found
+
+  # --- NEW ENDPOINT DEFINITION ADDED HERE ---
+  /diet/{user_id}/plan/latest:
+    get:
+      tags: [Diet]
+      summary: Get latest diet plan
+      description: Retrieves the most recently generated and sorted diet plan for a user.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: The ID of the user to fetch the plan for
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: The latest sorted diet plan.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    day:
+                      type: string
+                    meals:
+                      type: object
+        '404':
+          description: User or diet plan not found.
+
+  /workout/generate-plan:
+    post:
+      tags: [Workout]
+      summary: Generate a new workout plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateWorkoutPlan'
+      responses:
+        '200':
+          description: Workout plan generated successfully
+        '400':
+          description: Invalid input
+        '500':
+          description: API key configuration error or generation failed
+
+  /workout/log:
+    post:
+      tags: [Workout]
+      summary: Log a workout for a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkoutLog'
+      responses:
+        '201':
+          description: Workout logged successfully
+        '400':
+          description: Invalid input
+
+  /workout/{user_id}/history:
+    get:
+      tags: [Workout]
+      summary: Get workout history for a user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of workout logs
+        '404':
+          description: User not found
+
+  /progress/{user_id}/weekly-report:
+    get:
+      tags: [Progress]
+      summary: Get weekly report for a user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Weekly performance report
+        '404':
+          description: User not found
+
+  /progress/weight/log:
+    post:
+      tags: [Progress]
+      summary: Log a weight entry for a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeightLog'
+      responses:
+        '201':
+          description: Weight logged successfully
+        '400':
+          description: Invalid input
+
+  /progress/measurements/log:
+    post:
+      tags: [Progress]
+      summary: Log physical measurements for a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeasurementLog'
+      responses:
+        '201':
+          description: Measurements logged successfully
+        '400':
+          description: Invalid input
+
+  /progress/{user_id}/weight:
+    get:
+      tags: [Progress]
+      summary: Get weight history for a user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of weight entries
+        '404':
+          description: User not found
+
+  /reward/{user_id}/status:
+    get:
+      tags: [Rewards]
+      summary: Get reward status and achievements for a user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of new and all achievements
+        '404':
+          description: User not found
