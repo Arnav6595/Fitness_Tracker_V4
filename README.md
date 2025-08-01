@@ -37,12 +37,12 @@ Docker & Docker Compose
 
 Installation
 Clone the Repository
-
+```
 git clone https://github.com/Arnav6595/Fitness_Tracker.git
 cd Fitness_Tracker
-
+```
 Create and Activate a Virtual Environment
-
+```
 # For macOS/Linux
 python3 -m venv venv
 source venv/bin/activate
@@ -50,51 +50,51 @@ source venv/bin/activate
 # For Windows
 python -m venv venv
 .\venv\Scripts\activate
-
+```
 Install Dependencies
-
+```
 pip install -r requirements.txt
-
+```
 Configure Environment Variables
 Create a .env file in the project root. This file is ignored by Git and holds your secrets.
-
+```
 # .env
 DATABASE_URL="postgresql://user:password@db:5432/yourdbname"
 SECRET_KEY="a-very-strong-and-secret-key-for-jwt"
 GEMINI_API_KEY="your-google-gemini-api-key"
 FLASK_ENV="development"
-
+```
 Set Up the Database
 Run the database migrations to create all the necessary tables.
-
+```
 flask db upgrade
-
+```
 4. How to Run the Application
 A. Running with Docker Compose (Recommended Method)
 This method uses docker-compose.yml to build and run the application and its database in containers, mirroring a production environment.
 
 Start the Application
 This command builds the images if they don't exist and starts the containers in the background.
-
+```
 docker-compose up --build -d
-
+```
 Stop the Application
 This command stops and removes the containers and network.
-
+```
 docker-compose down
-
+```
 The application will be available at http://127.0.0.1:5000.
 
 B. Running Locally (for Quick Development)
 To run the application with the Flask development server without Docker:
-
+```
 python run.py
-
+```
 5. Testing
 The project uses Pytest for all testing. Tests are located in the tests/ directory. To run the complete test suite:
-
+```
 pytest
-
+```
 6. API Usage & Documentation
 Authentication
 All API endpoints require authentication.
