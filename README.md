@@ -106,7 +106,6 @@ User-specific endpoints (e.g., logging a workout, getting history) require both 
 Documentation
 The API documentation is generated using Swagger/OpenAPI and is available live once the application is running.
 
-URL: http://12awtc.com/
 
 7. Project Roadmap
 This project is being developed in phases.
@@ -144,7 +143,7 @@ Integrate a billing provider like Stripe for subscriptions.
 Formalize API versioning in all routes.
 
 Build an internal admin dashboard for client onboarding and management.
-
+```
 Directory Tree
 Fitness-Tracker/
 |
@@ -201,3 +200,4 @@ Fitness-Tracker/
 |____ README.md
 |____ requirements.txt
 |____ run.py
+```
