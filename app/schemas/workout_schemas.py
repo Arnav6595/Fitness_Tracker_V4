@@ -11,7 +11,7 @@ class ExerciseSchema(BaseModel):
 
 # Schema for the entire workout log request
 class WorkoutLogSchema(BaseModel):
-    user_id: int
+    #user_id: int
     name: str = Field(min_length=3)
     date: Optional[str] = None
     exercises: List[ExerciseSchema] = Field(min_length=1)

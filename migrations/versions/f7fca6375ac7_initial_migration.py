@@ -1,8 +1,8 @@
-"""Change User PK to single column and update FKs
+"""initial migration
 
-Revision ID: 0a8b33500b65
-Revises: ddd0fa0fa4aa
-Create Date: 2025-07-27 22:54:41.301850
+Revision ID: f7fca6375ac7
+Revises: 
+Create Date: 2025-07-31 18:21:48.769521
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '0a8b33500b65'
-down_revision = 'ddd0fa0fa4aa'
+revision = 'f7fca6375ac7'
+down_revision = None
 branch_labels = None
 depends_on = None
 
@@ -22,6 +22,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('company_name', sa.String(length=100), nullable=False),
     sa.Column('api_key', sa.String(length=128), nullable=False),
+    sa.Column('referral_code', sa.String(length=20), nullable=True),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('company_name'),
@@ -29,12 +30,15 @@ def upgrade():
     )
     with op.batch_alter_table('clients', schema='neondb') as batch_op:
         batch_op.create_index(batch_op.f('ix_neondb_clients_api_key'), ['api_key'], unique=True)
+        batch_op.create_index(batch_op.f('ix_neondb_clients_referral_code'), ['referral_code'], unique=True)
 
     op.create_table('user',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('client_id', sa.Integer(), nullable=False),
     sa.Column('username', sa.String(length=80), nullable=False),
-    sa.Column('contact_info', sa.String(length=120), nullable=False),
+    sa.Column('email', sa.String(length=120), nullable=False),
+    sa.Column('phone_number', sa.String(length=20), nullable=True),
+    sa.Column('password_hash', sa.String(length=256), nullable=True),
     sa.Column('name', sa.String(length=120), nullable=False),
     sa.Column('age', sa.Integer(), nullable=True),
     sa.Column('gender', sa.String(length=20), nullable=True),
@@ -51,7 +55,7 @@ def upgrade():
     sa.Column('activity_level', sa.String(length=50), nullable=True),
     sa.ForeignKeyConstraint(['client_id'], ['neondb.clients.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('contact_info', 'client_id', name='_contact_info_client_uc'),
+    sa.UniqueConstraint('email', 'client_id', name='_email_client_uc'),
     sa.UniqueConstraint('username', 'client_id', name='_username_client_uc'),
     schema='neondb'
     )
@@ -78,6 +82,17 @@ def upgrade():
     sa.Column('carbs_g', sa.Float(), nullable=True),
     sa.Column('fat_g', sa.Float(), nullable=True),
     sa.Column('date', sa.DateTime(), nullable=False),
+    sa.ForeignKeyConstraint(['client_id'], ['neondb.clients.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['neondb.user.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    schema='neondb'
+    )
+    op.create_table('diet_plan',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('client_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('generated_plan', sa.JSON(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['client_id'], ['neondb.clients.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['neondb.user.id'], ),
     sa.PrimaryKeyConstraint('id'),
@@ -166,10 +181,12 @@ def downgrade():
     op.drop_table('weight_entry', schema='neondb')
     op.drop_table('membership', schema='neondb')
     op.drop_table('measurement_log', schema='neondb')
+    op.drop_table('diet_plan', schema='neondb')
     op.drop_table('diet_log', schema='neondb')
     op.drop_table('achievement', schema='neondb')
     op.drop_table('user', schema='neondb')
     with op.batch_alter_table('clients', schema='neondb') as batch_op:
+        batch_op.drop_index(batch_op.f('ix_neondb_clients_referral_code'))
         batch_op.drop_index(batch_op.f('ix_neondb_clients_api_key'))
 
     op.drop_table('clients', schema='neondb')

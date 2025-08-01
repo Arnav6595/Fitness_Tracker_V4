@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   web:
     build: .
@@ -9,3 +8,17 @@ services:
       - .:/app
     env_file:
       - .env
+
+
+# services:
+#   web:
+#     build: .
+#     container_name: fitness-app-container
+#     ports:
+#       - "8000:8000"
+#     volumes:
+#       - .:/app
+#     env_file:
+#       - .env
+#     # This correctly bypasses the entrypoint.sh script
+#     entrypoint: sleep infinity

@@ -5,12 +5,14 @@ import google.generativeai as genai
 from datetime import datetime
 from pydantic import ValidationError
 from app.schemas.workout_schemas import GenerateWorkoutPlanSchema, WorkoutLogSchema
-from app.utils.decorators import require_api_key # 1. IMPORT THE DECORATOR
+# --- MODIFIED: Import require_jwt ---
+from app.utils.decorators import require_api_key, require_jwt
 
 workout_bp = Blueprint('workout_bp', __name__)
 
+# This route remains unchanged as it's a B2B client action
 @workout_bp.route('/generate-plan', methods=['POST'])
-@require_api_key # 2. PROTECT THE ROUTE
+@require_api_key
 def generate_workout_plan():
     raw_data = request.get_json()
     try:
@@ -18,7 +20,6 @@ def generate_workout_plan():
     except ValidationError as e:
         return jsonify({"error": "Invalid input", "details": e.errors()}), 400
 
-    # 3. VERIFY USER BELONGS TO THE AUTHENTICATED CLIENT
     user = User.query.filter_by(id=data.user_id, client_id=g.client.id).first_or_404(
         description="User not found or does not belong to this client."
     )
@@ -36,7 +37,7 @@ def generate_workout_plan():
 
     if result.get("success"):
         new_plan = WorkoutPlan(
-            client_id=g.client.id, # 4. ASSOCIATE PLAN WITH THE CLIENT
+            client_id=g.client.id,
             author=user, 
             generated_plan=result['plan']
         )
@@ -46,33 +47,30 @@ def generate_workout_plan():
     else:
         return jsonify({"error": result.get("error")}), 500
 
-
+# --- MODIFIED: This route is now protected by JWT ---
 @workout_bp.route('/log', methods=['POST'])
-@require_api_key # 2. PROTECT THE ROUTE
+@require_jwt
 def log_workout():
     raw_data = request.get_json()
     try:
+        # Note: Ensure user_id is removed from WorkoutLogSchema
         data = WorkoutLogSchema(**raw_data)
     except ValidationError as e:
         return jsonify({"error": "Invalid input", "details": e.errors()}), 400
 
-    # 3. VERIFY USER BELONGS TO THE AUTHENTICATED CLIENT
-    user = User.query.filter_by(id=data.user_id, client_id=g.client.id).first_or_404(
-        description="User not found or does not belong to this client."
-    )
-
     try:
         new_workout_log = WorkoutLog(
-            client_id=g.client.id,
-            user_id=user.id,  #<-- Use user_id directly
+            # Use the authenticated user's info from the JWT
+            client_id=g.current_user.client_id,
+            user_id=g.current_user.id,
             name=data.name
         )
         db.session.add(new_workout_log)
-        db.session.flush() # <-- SOLUTION IMPLEMENTED HERE
+        db.session.flush()
 
         for ex_data in data.exercises:
             exercise_entry = ExerciseEntry(
-                client_id=g.client.id, # 4. ASSOCIATE EXERCISE WITH THE CLIENT
+                client_id=g.current_user.client_id,
                 name=ex_data.name,
                 sets=ex_data.sets,
                 reps=ex_data.reps,
@@ -91,14 +89,9 @@ def log_workout():
         db.session.rollback()
         return jsonify({"error": "Failed to log workout.", "details": str(e)}), 500
 
-
-@workout_bp.route('/<int:user_id>/history', methods=['GET'])
-@require_api_key # 2. PROTECT THE ROUTE
-def get_workout_history(user_id):
-    # 3. VERIFY USER BELONGS TO THE AUTHENTICATED CLIENT
-    user = User.query.filter_by(id=user_id, client_id=g.client.id).first_or_404(
-        description="User not found or does not belong to this client."
-    )
-    # 4. ENSURE WE ONLY QUERY LOGS FOR THIS CLIENT
-    logs = WorkoutLog.query.filter_by(user_id=user.id, client_id=g.client.id).order_by(WorkoutLog.date.desc()).all()
+# --- MODIFIED: Route changed to fetch current user's data ---
+@workout_bp.route('/history/me', methods=['GET'])
+@require_jwt
+def get_my_workout_history():
+    logs = WorkoutLog.query.filter_by(user_id=g.current_user.id).order_by(WorkoutLog.date.desc()).all()
     return jsonify([log.to_dict() for log in logs]), 200

@@ -9,7 +9,7 @@ class MacroSchema(BaseModel):
     fat_g: Optional[float] = Field(None, ge=0)
 
 class DietLogSchema(BaseModel):
-    user_id: int
+    # user_id: int  <-- This line is removed
     meal_name: str = Field(..., min_length=2) # ... means the field is required
     calories: int = Field(..., gt=0)
     food_items: Optional[str] = None

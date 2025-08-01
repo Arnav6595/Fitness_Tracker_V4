@@ -2,6 +2,8 @@
 from datetime import date, datetime, timezone
 import uuid
 from . import db
+# --- ADDED IMPORT FOR PASSWORD HASHING ---
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # --- B2B CLIENT (TENANT) MODEL ---
 class Client(db.Model):
@@ -10,6 +12,8 @@ class Client(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     company_name = db.Column(db.String(100), nullable=False, unique=True)
     api_key = db.Column(db.String(128), nullable=False, unique=True, index=True)
+    # --- ADDED REFERRAL CODE FIELD ---
+    referral_code = db.Column(db.String(20), unique=True, index=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
     users = db.relationship('User', back_populates='client')
@@ -21,25 +25,31 @@ class Client(db.Model):
     measurement_logs = db.relationship('MeasurementLog', back_populates='client')
     workout_plans = db.relationship('WorkoutPlan', back_populates='client')
     achievements = db.relationship('Achievement', back_populates='client')
-    # --- ADDED RELATIONSHIP FOR DIETPLAN ---
     diet_plans = db.relationship('DietPlan', back_populates='client')
 
     def __init__(self, company_name):
         self.company_name = company_name
         self.api_key = str(uuid.uuid4())
+        # --- ADDED LOGIC TO AUTO-GENERATE A REFERRAL CODE ---
+        self.referral_code = f"{company_name.split()[0].upper()}{uuid.uuid4().hex[:4].upper()}"
 
     def __repr__(self):
         return f'<Client {self.company_name}>'
 
 
-# --- USER MODEL ---
+# --- USER MODEL (WITH AUTHENTICATION CHANGES) ---
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('neondb.clients.id'), nullable=False)
 
     username = db.Column(db.String(80), nullable=False)
-    contact_info = db.Column(db.String(120), nullable=False)
+    # --- RENAMED contact_info TO email ---
+    email = db.Column(db.String(120), nullable=False)
+    # --- ADDED phone_number and password_hash ---
+    phone_number = db.Column(db.String(20), nullable=True)
+    password_hash = db.Column(db.String(256))
+
     name = db.Column(db.String(120), nullable=False)
     age = db.Column(db.Integer)
     gender = db.Column(db.String(20))
@@ -63,12 +73,21 @@ class User(db.Model):
     measurement_logs = db.relationship('MeasurementLog', back_populates='author', lazy=True, cascade="all, delete-orphan")
     workout_plans = db.relationship('WorkoutPlan', back_populates='author', lazy=True, cascade="all, delete-orphan")
     achievements = db.relationship('Achievement', back_populates='author', lazy=True, cascade="all, delete-orphan")
-    # --- ADDED RELATIONSHIP FOR DIETPLAN ---
     diet_plans = db.relationship('DietPlan', back_populates='author', lazy=True, cascade="all, delete-orphan")
+
+    # --- ADDED PASSWORD HELPER METHODS ---
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        if self.password_hash is None:
+            return False
+        return check_password_hash(self.password_hash, password)
 
     __table_args__ = (
         db.UniqueConstraint('username', 'client_id', name='_username_client_uc'),
-        db.UniqueConstraint('contact_info', 'client_id', name='_contact_info_client_uc'),
+        # --- UPDATED UniqueConstraint to use email ---
+        db.UniqueConstraint('email', 'client_id', name='_email_client_uc'),
         {'schema': 'neondb'}
     )
 
@@ -119,7 +138,6 @@ class DietLog(db.Model):
         }
 
 
-# --- NEW DIETPLAN MODEL ---
 class DietPlan(db.Model):
     __tablename__ = 'diet_plan'
     id = db.Column(db.Integer, primary_key=True)

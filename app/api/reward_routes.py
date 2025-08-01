@@ -2,29 +2,24 @@
 from flask import Blueprint, jsonify, g
 from app.models import User, Achievement
 from app.services.reward_service import RewardService
-from app.utils.decorators import require_api_key # 1. IMPORT THE DECORATOR
+# --- MODIFIED: Import require_jwt ---
+from app.utils.decorators import require_api_key, require_jwt
 
 reward_bp = Blueprint('reward_bp', __name__)
 
-@reward_bp.route('/<int:user_id>/status', methods=['GET'])
-@require_api_key # 2. PROTECT THE ROUTE
-def get_reward_status(user_id):
+# --- MODIFIED: Route changed to fetch current user's data ---
+@reward_bp.route('/status/me', methods=['GET'])
+@require_jwt
+def get_my_reward_status():
     """
-    Checks for new rewards and returns all achievements for a user,
-    ensuring the user belongs to the authenticated client.
+    Checks for new rewards and returns all achievements for the authenticated user.
     """
-    # 3. VERIFY USER BELONGS TO THE AUTHENTICATED CLIENT
-    user = User.query.filter_by(id=user_id, client_id=g.client.id).first_or_404(
-        description="User not found or does not belong to this client."
-    )
-
     try:
-        # Note: The RewardService might also need to be made client-aware
-        reward_service = RewardService(user.id)
+        # Use the authenticated user's ID
+        reward_service = RewardService(g.current_user.id)
         newly_unlocked = reward_service.check_and_grant_rewards()
         
-        # 4. ENSURE WE ONLY QUERY ACHIEVEMENTS FOR THIS CLIENT'S USER
-        all_achievements = Achievement.query.filter_by(user_id=user.id, client_id=g.client.id).order_by(Achievement.unlocked_at.desc()).all()
+        all_achievements = Achievement.query.filter_by(user_id=g.current_user.id).order_by(Achievement.unlocked_at.desc()).all()
 
         return jsonify({
             "newly_unlocked_rewards": newly_unlocked,

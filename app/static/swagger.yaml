@@ -1,44 +1,52 @@
 openapi: 3.0.3
 info:
   title: Fitness Tracker API
-  description: The complete API reference for the Fitness Tracker B2B platform. All endpoints are protected and require a valid API key.
+  description: The complete API reference for the Fitness Tracker B2B platform.
   version: 1.0.0
-
 servers:
   - url: /api
     description: API server
-
-# Define security schemes
 security:
   - ApiKeyAuth: []
-
-# Define reusable components
 components:
   securitySchemes:
     ApiKeyAuth:
       type: apiKey
       in: header
       name: X-API-Key
-
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
-    # --- User Schemas ---
     Membership:
       type: object
       properties:
         plan:
           type: string
           example: "Premium"
-        end_date:
+    UserLogin:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
           type: string
-          format: date
-          example: "2026-08-01"
+          format: email
+          example: "priya.sharma@example.com"
+        password:
+          type: string
+          format: password
+          example: "strongpassword123"
     UserRegistration:
       type: object
       required:
         - name
         - age
         - gender
-        - contact_info
+        - email
+        - password
         - weight_kg
         - height_cm
         - fitness_goals
@@ -56,16 +64,24 @@ components:
         gender:
           type: string
           enum: [Male, Female, Other]
-        contact_info:
+        email:
           type: string
           format: email
           example: "priya.sharma@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "strongpassword123"
+        phone_number:
+          type: string
+          example: "+919876543210"
         weight_kg:
           type: number
           example: 62.5
         height_cm:
           type: number
-          example: 160.0
+          example: 160
         fitness_goals:
           type: string
           example: "Fat loss and Toning"
@@ -92,8 +108,6 @@ components:
         health_conditions:
           type: string
           example: "None"
-
-    # --- Diet Schemas ---
     Macros:
       type: object
       properties:
@@ -106,12 +120,9 @@ components:
     DietLog:
       type: object
       required:
-        - user_id
         - meal_name
         - calories
       properties:
-        user_id:
-          type: integer
         meal_name:
           type: string
         calories:
@@ -144,8 +155,6 @@ components:
           type: array
           items:
             type: string
-
-    # --- Workout Schemas ---
     Exercise:
       type: object
       required:
@@ -165,12 +174,9 @@ components:
     WorkoutLog:
       type: object
       required:
-        - user_id
         - name
         - exercises
       properties:
-        user_id:
-          type: integer
         name:
           type: string
         date:
@@ -195,16 +201,11 @@ components:
         equipment:
           type: string
           enum: [bodyweight only, Home gym, Gym access]
-
-    # --- Progress Schemas ---
     WeightLog:
       type: object
       required:
-        - user_id
         - weight_kg
       properties:
-        user_id:
-          type: integer
         weight_kg:
           type: number
         date:
@@ -212,11 +213,7 @@ components:
           format: date-time
     MeasurementLog:
       type: object
-      required:
-        - user_id
       properties:
-        user_id:
-          type: integer
         date:
           type: string
           format: date-time
@@ -228,8 +225,6 @@ components:
           type: number
         hips_cm:
           type: number
-
-# Define API Paths
 paths:
   /auth/register:
     post:
@@ -248,11 +243,37 @@ paths:
           description: Invalid input
         '409':
           description: User already exists
-
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Log in a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+      responses:
+        '200':
+          description: Login successful, returns JWT token
+        '401':
+          description: Invalid email or password
+  /user/profile/me:
+    get:
+      tags: [User]
+      summary: Get my profile
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: The current user's profile data.
+        '401':
+          description: Authentication error (missing token, expired, etc.)
   /diet/generate-plan:
     post:
       tags: [Diet]
-      summary: Generate a new diet plan
+      summary: Generate a new diet plan for a user
       requestBody:
         required: true
         content:
@@ -264,13 +285,13 @@ paths:
           description: Diet plan generated successfully
         '400':
           description: Invalid input
-        '500':
-          description: API key configuration error or generation failed
-
   /diet/log:
     post:
       tags: [Diet]
-      summary: Log a meal for a user
+      summary: Log a meal for myself
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -282,75 +303,48 @@ paths:
           description: Meal logged successfully
         '400':
           description: Invalid input
-
-  /diet/{user_id}/logs:
+  /diet/logs/me:
     get:
       tags: [Diet]
-      summary: Get diet history for a user
-      parameters:
-        - name: user_id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: A list of diet logs
-        '404':
-          description: User not found
-
-  /diet/{user_id}/weekly-summary:
-    get:
-      tags: [Diet]
-      summary: Get weekly diet summary for a user
-      parameters:
-        - name: user_id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Weekly diet summary
-        '404':
-          description: User not found
-
-  # --- NEW ENDPOINT DEFINITION ADDED HERE ---
-  /diet/{user_id}/plan/latest:
-    get:
-      tags: [Diet]
-      summary: Get latest diet plan
-      description: Retrieves the most recently generated and sorted diet plan for a user.
+      summary: Get my diet history
       security:
         - ApiKeyAuth: []
-      parameters:
-        - name: user_id
-          in: path
-          required: true
-          description: The ID of the user to fetch the plan for
-          schema:
-            type: integer
+        - BearerAuth: []
       responses:
         '200':
-          description: The latest sorted diet plan.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    day:
-                      type: string
-                    meals:
-                      type: object
+          description: A list of my diet logs
+        '401':
+          description: Authentication error
+  /diet/weekly-summary/me:
+    get:
+      tags: [Diet]
+      summary: Get my weekly diet summary
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: My weekly diet summary
+        '401':
+          description: Authentication error
+  /diet/plan/latest/me:
+    get:
+      tags: [Diet]
+      summary: Get my latest diet plan
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: My latest diet plan
+        '401':
+          description: Authentication error
         '404':
-          description: User or diet plan not found.
-
+          description: No diet plan found for me
   /workout/generate-plan:
     post:
       tags: [Workout]
-      summary: Generate a new workout plan
+      summary: Generate a new workout plan for a user
       requestBody:
         required: true
         content:
@@ -362,13 +356,13 @@ paths:
           description: Workout plan generated successfully
         '400':
           description: Invalid input
-        '500':
-          description: API key configuration error or generation failed
-
   /workout/log:
     post:
       tags: [Workout]
-      summary: Log a workout for a user
+      summary: Log a workout for myself
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -380,43 +374,37 @@ paths:
           description: Workout logged successfully
         '400':
           description: Invalid input
-
-  /workout/{user_id}/history:
+  /workout/history/me:
     get:
       tags: [Workout]
-      summary: Get workout history for a user
-      parameters:
-        - name: user_id
-          in: path
-          required: true
-          schema:
-            type: integer
+      summary: Get my workout history
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       responses:
         '200':
-          description: A list of workout logs
-        '404':
-          description: User not found
-
-  /progress/{user_id}/weekly-report:
+          description: A list of my workout logs
+        '401':
+          description: Authentication error
+  /progress/weekly-report/me:
     get:
       tags: [Progress]
-      summary: Get weekly report for a user
-      parameters:
-        - name: user_id
-          in: path
-          required: true
-          schema:
-            type: integer
+      summary: Get my weekly report
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       responses:
         '200':
-          description: Weekly performance report
-        '404':
-          description: User not found
-
+          description: My weekly performance report
+        '401':
+          description: Authentication error
   /progress/weight/log:
     post:
       tags: [Progress]
-      summary: Log a weight entry for a user
+      summary: Log my weight
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -428,11 +416,13 @@ paths:
           description: Weight logged successfully
         '400':
           description: Invalid input
-
   /progress/measurements/log:
     post:
       tags: [Progress]
-      summary: Log physical measurements for a user
+      summary: Log my physical measurements
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -444,35 +434,27 @@ paths:
           description: Measurements logged successfully
         '400':
           description: Invalid input
-
-  /progress/{user_id}/weight:
+  /progress/weight/me:
     get:
       tags: [Progress]
-      summary: Get weight history for a user
-      parameters:
-        - name: user_id
-          in: path
-          required: true
-          schema:
-            type: integer
+      summary: Get my weight history
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       responses:
         '200':
-          description: A list of weight entries
-        '404':
-          description: User not found
-
-  /reward/{user_id}/status:
+          description: A list of my weight entries
+        '401':
+          description: Authentication error
+  /reward/status/me:
     get:
       tags: [Rewards]
-      summary: Get reward status and achievements for a user
-      parameters:
-        - name: user_id
-          in: path
-          required: true
-          schema:
-            type: integer
+      summary: Get my reward status and achievements
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       responses:
         '200':
-          description: A list of new and all achievements
-        '404':
-          description: User not found
+          description: A list of my new and all achievements
+        '401':
+          description: Authentication error

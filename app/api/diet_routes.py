@@ -7,11 +7,13 @@ import google.generativeai as genai
 from datetime import datetime
 from pydantic import ValidationError
 from app.schemas.diet_schemas import DietLogSchema, GenerateDietPlanSchema
-from app.utils.decorators import require_api_key
+# --- MODIFIED: Import require_jwt ---
+from app.utils.decorators import require_api_key, require_jwt
 
 # Create a Blueprint for diet routes
 diet_bp = Blueprint('diet_bp', __name__)
 
+# This route remains unchanged as it's a B2B client action
 @diet_bp.route('/generate-plan', methods=['POST'])
 @require_api_key
 def generate_diet_plan():
@@ -48,73 +50,23 @@ def generate_diet_plan():
     else:
         return jsonify({"error": result.get("error")}), 500
 
-
-@diet_bp.route('/<int:user_id>/plan/latest', methods=['GET'])
-@require_api_key
-def get_latest_diet_plan(user_id):
-    """
-    Retrieves and sorts the most recently generated diet plan for a user.
-    """
-    # 1. Verify user belongs to the authenticated client
-    user = User.query.filter_by(id=user_id, client_id=g.client.id).first_or_404()
-    
-    # 2. Find the most recent plan for this user
-    latest_plan = DietPlan.query.filter_by(
-        user_id=user.id, 
-        client_id=g.client.id
-    ).order_by(DietPlan.created_at.desc()).first()
-
-    if not latest_plan:
-        return jsonify({"error": "No diet plan found for this user."}), 404
-
-    # --- MODIFIED SORTING LOGIC STARTS HERE ---
-
-    # 3. Get the full plan object from the database record
-    full_plan_object = latest_plan.generated_plan
-
-    # 4. Correctly access the nested 'weekly_plan' dictionary
-    jumbled_weekly_plan = full_plan_object.get('weekly_plan', {})
-
-    # 5. Define the correct order of the days
-    day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-
-    # 6. Sort the weekly plan based on the defined day order
-    try:
-        sorted_plan_items = sorted(
-            jumbled_weekly_plan.items(), 
-            key=lambda item: day_order.index(item[0])
-        )
-    except (ValueError, AttributeError, TypeError):
-        # Handle cases where the plan is not a dict or a day is not in day_order
-        return jsonify({"error": "Could not sort the diet plan due to unexpected format."}), 500
-
-    # 7. Format the sorted items into a clean list of objects for the frontend
-    formatted_plan = [{"day": day, "meals": meals} for day, meals in sorted_plan_items]
-
-    # --- MODIFIED SORTING LOGIC ENDS HERE ---
-
-    # 8. Return the clean, sorted, and formatted plan as JSON
-    return jsonify(formatted_plan), 200
-
-
+# --- MODIFIED: This route is now protected by JWT ---
 @diet_bp.route('/log', methods=['POST'])
-@require_api_key
+@require_jwt
 def log_meal():
     raw_data = request.get_json()
     try:
+        # Note: Ensure user_id is removed from DietLogSchema
         data = DietLogSchema(**raw_data)
     except ValidationError as e:
         return jsonify({"error": "Invalid input", "details": e.errors()}), 400
     
-    user = User.query.filter_by(id=data.user_id, client_id=g.client.id).first_or_404(
-        description="User not found or does not belong to this client."
-    )
-    
     try:
         macros = data.macros.model_dump() if data.macros else {}
         new_log = DietLog(
-            client_id=g.client.id,
-            user_id=user.id,
+            # Use the authenticated user's info from the JWT
+            client_id=g.current_user.client_id,
+            user_id=g.current_user.id,
             meal_name=data.meal_name,
             food_items=data.food_items,
             calories=data.calories,
@@ -129,24 +81,45 @@ def log_meal():
         db.session.rollback()
         return jsonify({"error": "Failed to log meal.", "details": str(e)}), 500
 
-
-@diet_bp.route('/<int:user_id>/logs', methods=['GET'])
-@require_api_key
-def get_diet_logs(user_id):
-    user = User.query.filter_by(id=user_id, client_id=g.client.id).first_or_404(
-        description="User not found or does not belong to this client."
-    )
-    logs = DietLog.query.filter_by(user_id=user.id, client_id=g.client.id).order_by(DietLog.date.desc()).all()
+# --- MODIFIED: Route changed to fetch current user's data ---
+@diet_bp.route('/logs/me', methods=['GET'])
+@require_jwt
+def get_my_diet_logs():
+    logs = DietLog.query.filter_by(user_id=g.current_user.id).order_by(DietLog.date.desc()).all()
     return jsonify([log.to_dict() for log in logs]), 200
 
-@diet_bp.route('/<int:user_id>/weekly-summary', methods=['GET'])
-@require_api_key
-def get_diet_summary(user_id):
-    User.query.filter_by(id=user_id, client_id=g.client.id).first_or_404(
-        description="User not found or does not belong to this client."
-    )
+# --- MODIFIED: Route changed to fetch current user's data ---
+@diet_bp.route('/plan/latest/me', methods=['GET'])
+@require_jwt
+def get_my_latest_diet_plan():
+    latest_plan = DietPlan.query.filter_by(
+        user_id=g.current_user.id
+    ).order_by(DietPlan.created_at.desc()).first()
+
+    if not latest_plan:
+        return jsonify({"error": "No diet plan found for this user."}), 404
+
+    full_plan_object = latest_plan.generated_plan
+    jumbled_weekly_plan = full_plan_object.get('weekly_plan', {})
+    day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
     try:
-        reporter = ReportingService(user_id)
+        sorted_plan_items = sorted(
+            jumbled_weekly_plan.items(), 
+            key=lambda item: day_order.index(item[0])
+        )
+    except (ValueError, AttributeError, TypeError):
+        return jsonify({"error": "Could not sort the diet plan due to unexpected format."}), 500
+
+    formatted_plan = [{"day": day, "meals": meals} for day, meals in sorted_plan_items]
+    return jsonify(formatted_plan), 200
+
+# --- MODIFIED: Route changed to fetch current user's data ---
+@diet_bp.route('/weekly-summary/me', methods=['GET'])
+@require_jwt
+def get_my_diet_summary():
+    try:
+        reporter = ReportingService(g.current_user.id)
         summary = reporter.get_weekly_diet_summary()
         return jsonify(summary), 200
     except Exception as e:

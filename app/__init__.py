@@ -17,9 +17,8 @@ db = SQLAlchemy()
 migrate = Migrate()
 
 # --- Swagger UI Configuration ---
-# This sets up the endpoint for your interactive API documentation.
-SWAGGER_URL = '/api/docs'  # The URL for the documentation page
-API_URL = '/static/swagger.yaml'  # The path to your documentation content file
+SWAGGER_URL = '/api/docs'
+API_URL = '/static/swagger.yaml'
 
 # Create the Swagger UI blueprint
 swaggerui_blueprint = get_swaggerui_blueprint(
@@ -39,7 +38,6 @@ def create_app(test_config=None):
     app = Flask(__name__)
 
     if test_config is None:
-        # --- Normal App Execution ---
         # Load the default configuration from the config object
         app.config.from_object(Config)
 
@@ -48,10 +46,8 @@ def create_app(test_config=None):
         app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 
     else:
-        # --- Test Execution ---
         # Load the test configuration if it's passed in
         app.config.from_mapping(test_config)
-
 
     # Initialize extensions with the app
     db.init_app(app)
@@ -63,23 +59,23 @@ def create_app(test_config=None):
     from .api.workout_routes import workout_bp
     from .api.progress_routes import progress_bp
     from .api.reward_routes import reward_bp
+    from .api.user_routes import user_bp  # <-- IMPORT THE NEW BLUEPRINT
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(diet_bp, url_prefix='/api/diet')
     app.register_blueprint(workout_bp, url_prefix='/api/workout')
     app.register_blueprint(progress_bp, url_prefix='/api/progress')
     app.register_blueprint(reward_bp, url_prefix='/api/reward')
+    app.register_blueprint(user_bp, url_prefix='/api/user')  # <-- REGISTER IT
 
     # Register the Swagger UI blueprint with the app
     app.register_blueprint(swaggerui_blueprint)
 
     # --- Set up and start the background scheduler ---
-    # Avoid running the scheduler during tests
     if not app.config.get("TESTING"):
         from .services.adaptive_planner_service import run_weekly_adaptive_planning
 
         scheduler = BackgroundScheduler(daemon=True)
-        # Schedule the job to run every Sunday at 2 AM
         scheduler.add_job(run_weekly_adaptive_planning, 'cron', day_of_week='sun', hour=2)
         scheduler.start()
     # ---------------------------------------------
