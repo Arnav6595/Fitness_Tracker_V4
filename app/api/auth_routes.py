@@ -1,15 +1,14 @@
 # app/api/auth_routes.py
 
-from flask import Blueprint, request, jsonify, g
-from app.models import db, User, Membership
+from flask import Blueprint, request, jsonify, g, current_app
+from app.models import db, User, Membership, TokenBlocklist
 from datetime import datetime, timedelta
 from pydantic import ValidationError
-# Updated import to the new schema location
 from app.schemas.user_schemas import UserRegistrationSchema, UserLoginSchema
-from app.utils.decorators import require_api_key
+from app.utils.decorators import require_api_key, require_jwt
 import logging
-import jwt  # Make sure to import jwt
-from flask import current_app  # To access JWT secret key
+import jwt
+import uuid # Import uuid for generating token IDs
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -112,11 +111,13 @@ def login_user():
 
     # Check if the user exists and the password is correct
     if user and user.check_password(data.password):
-        # Create the JWT token
+        # Create the JWT token with a unique ID (jti)
+        token_id = uuid.uuid4().hex
         token = jwt.encode({
             'user_id': user.id,
             'client_id': g.client.id,
-            'exp': datetime.utcnow() + timedelta(hours=24)  # Token expiration time
+            'exp': datetime.utcnow() + timedelta(hours=24),  # Token expiration time
+            'jti': token_id, # Add the unique token identifier
         }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
         return jsonify({
@@ -125,3 +126,25 @@ def login_user():
         })
 
     return jsonify({"error": "Invalid email or password."}), 401
+
+
+# --- NEW LOGOUT ENDPOINT ---
+@auth_bp.route('/logout', methods=['POST'])
+@require_jwt
+def logout_user():
+    """
+    Endpoint to log out a user by blocklisting their token.
+    """
+    try:
+        # The decorator has already decoded the token and put it in g.decoded_token
+        jti = g.decoded_token['jti']
+        
+        # Add the token's unique ID to the blocklist
+        blocklisted_token = TokenBlocklist(jti=jti)
+        db.session.add(blocklisted_token)
+        db.session.commit()
+        
+        return jsonify({"message": "Successfully logged out."}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to logout.", "details": str(e)}), 500

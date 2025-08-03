@@ -2,7 +2,7 @@
 
 from functools import wraps
 from flask import request, g, jsonify, current_app
-from app.models import Client, User
+from app.models import Client, User, TokenBlocklist
 import jwt
 
 def require_api_key(f):
@@ -27,7 +27,7 @@ def require_api_key(f):
 def require_jwt(f):
     """
     Decorator to protect routes with JWT authentication for end-users.
-    It now ALSO validates the client API key to ensure the user belongs to the client.
+    It now ALSO validates the client API key and checks the token blocklist.
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -51,6 +51,12 @@ def require_jwt(f):
 
         try:
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+            
+            # --- NEW: Check if the token has been blocklisted ---
+            jti = data.get('jti')
+            if not jti or TokenBlocklist.query.filter_by(jti=jti).first():
+                return jsonify({"error": "Token has been revoked"}), 401
+
             user = User.query.get(data['user_id'])
 
             # 3. Finally, verify the user belongs to the client
@@ -59,6 +65,7 @@ def require_jwt(f):
 
             g.current_user = user
             g.client = client # Also attach the client for consistency
+            g.decoded_token = data # Store decoded token for access in the logout route
 
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Token has expired!"}), 401

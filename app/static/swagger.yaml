@@ -258,6 +258,19 @@ paths:
           description: Login successful, returns JWT token
         '401':
           description: Invalid email or password
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Log out a user
+      description: Invalidates the user's current JWT by adding it to a blocklist.
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Successfully logged out
+        '401':
+          description: Authentication error (e.g., token is missing, invalid, or expired)
   /user/profile/me:
     get:
       tags: [User]

@@ -297,3 +297,17 @@ class Achievement(db.Model):
             'id': self.id, 'user_id': self.user_id, 'name': self.name,
             'description': self.description, 'unlocked_at': self.unlocked_at.isoformat()
         }
+
+# --- NEW MODEL FOR TOKEN BLOCKLIST ---
+class TokenBlocklist(db.Model):
+    __tablename__ = 'token_blocklist'
+    id = db.Column(db.Integer, primary_key=True)
+    jti = db.Column(db.String(36), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        {'schema': 'neondb'},
+    )
+
+    def __repr__(self):
+        return f"<Token {self.jti}>"
