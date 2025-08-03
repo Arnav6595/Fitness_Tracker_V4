@@ -15,4 +15,4 @@ print("DB Options:", app.config['SQLALCHEMY_ENGINE_OPTIONS'])
 
 if __name__ == '__main__':
     # This will run the development server
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

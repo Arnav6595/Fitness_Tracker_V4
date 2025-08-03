@@ -3,7 +3,7 @@ services:
     build: .
     container_name: fitness-app-container
     ports:
-      - "8000:8000"
+      - "5000:5000" # Changed from 8000 to 5000 to match Flask's default port
     volumes:
       - .:/app
     env_file:

@@ -22,7 +22,7 @@ RUN chmod +x entrypoint.sh
 COPY . .
 
 # Expose the port that Gunicorn will run on
-EXPOSE 8000
+EXPOSE 5000
 
 # Define the command that will run when the container starts
 ENTRYPOINT ["./entrypoint.sh"]
