@@ -74,7 +74,7 @@ class User(db.Model):
     workout_plans = db.relationship('WorkoutPlan', back_populates='author', lazy=True, cascade="all, delete-orphan")
     achievements = db.relationship('Achievement', back_populates='author', lazy=True, cascade="all, delete-orphan")
     diet_plans = db.relationship('DietPlan', back_populates='author', lazy=True, cascade="all, delete-orphan")
-
+    refresh_tokens = db.relationship('RefreshToken', back_populates='user', cascade='all, delete-orphan')
     # --- ADDED PASSWORD HELPER METHODS ---
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -311,3 +311,20 @@ class TokenBlocklist(db.Model):
 
     def __repr__(self):
         return f"<Token {self.jti}>"
+    
+
+class RefreshToken(db.Model):
+    __tablename__ = 'refresh_token'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('neondb.user.id'), nullable=False)
+    token = db.Column(db.String(256), nullable=False, unique=True, index=True)
+    expiry_date = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    user = db.relationship('User', back_populates='refresh_tokens')
+
+    __table_args__ = (
+        {'schema': 'neondb'},
+    )
+
+    def __repr__(self):
+        return f"<RefreshToken for User {self.user_id}>"

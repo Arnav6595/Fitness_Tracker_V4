@@ -1,8 +1,8 @@
 # app/api/auth_routes.py
 
 from flask import Blueprint, request, jsonify, g, current_app
-from app.models import db, User, Membership, TokenBlocklist
-from datetime import datetime, timedelta
+from app.models import db, User, Membership, TokenBlocklist, RefreshToken
+from datetime import datetime, timedelta, timezone
 from pydantic import ValidationError
 from app.schemas.user_schemas import UserRegistrationSchema, UserLoginSchema
 from app.utils.decorators import require_api_key, require_jwt
@@ -111,37 +111,122 @@ def login_user():
 
     # Check if the user exists and the password is correct
     if user and user.check_password(data.password):
-        # Create the JWT token with a unique ID (jti)
-        token_id = uuid.uuid4().hex
-        token = jwt.encode({
-            'user_id': user.id,
-            'client_id': g.client.id,
-            'exp': datetime.utcnow() + timedelta(hours=24),  # Token expiration time
-            'jti': token_id, # Add the unique token identifier
-        }, current_app.config['SECRET_KEY'], algorithm="HS256")
+        try:
+            # 1. Create short-lived access token
+            access_token_id = uuid.uuid4().hex
+            access_token = jwt.encode({
+                'user_id': user.id,
+                'client_id': g.client.id,
+                'exp': datetime.now(timezone.utc) + timedelta(minutes=15),  # Short-lived token
+                'jti': access_token_id,
+                'type': 'access'
+            }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
-        return jsonify({
-            "message": "Login successful!",
-            "token": token
-        })
+            # 2. Create long-lived refresh token
+            refresh_token_id = uuid.uuid4().hex
+            refresh_token_expiry = datetime.now(timezone.utc) + timedelta(days=30)
+            refresh_token = jwt.encode({
+                'user_id': user.id,
+                'client_id': g.client.id,
+                'exp': refresh_token_expiry,
+                'jti': refresh_token_id,
+                'type': 'refresh'
+            }, current_app.config['SECRET_KEY'], algorithm="HS256")
+            
+            # 3. Store the refresh token in the database
+            new_refresh_token = RefreshToken(
+                user_id=user.id,
+                token=refresh_token,
+                expiry_date=refresh_token_expiry
+            )
+            db.session.add(new_refresh_token)
+            db.session.commit()
+
+            # 4. Return both tokens
+            return jsonify({
+                "message": "Login successful!",
+                "access_token": access_token,
+                "refresh_token": refresh_token
+            })
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to issue tokens: {str(e)}")
+            return jsonify({"error": "Failed to issue tokens.", "details": str(e)}), 500
 
     return jsonify({"error": "Invalid email or password."}), 401
 
 
-# --- NEW LOGOUT ENDPOINT ---
+# --- NEW REFRESH ENDPOINT ---
+@auth_bp.route('/refresh', methods=['POST'])
+def refresh_token():
+    """
+    Endpoint to get a new access token using a refresh token.
+    """
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"error": "Authorization header is missing or invalid."}), 401
+
+    token = auth_header.split(' ')[1]
+
+    try:
+        # Decode the refresh token
+        payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+
+        # Verify it's a refresh token
+        if payload.get('type') != 'refresh':
+            return jsonify({"error": "Invalid token type."}), 401
+
+        # Check if the refresh token exists in the database and is still valid
+        refresh_token_entry = RefreshToken.query.filter_by(token=token).first()
+        # CORRECTED THIS LINE
+        if not refresh_token_entry or refresh_token_entry.expiry_date < datetime.now(timezone.utc):
+            return jsonify({"error": "Refresh token is invalid or expired."}), 401
+
+        # Issue a new access token
+        new_access_token_id = uuid.uuid4().hex
+        new_access_token = jwt.encode({
+            'user_id': payload['user_id'],
+            'client_id': payload['client_id'],
+            # CORRECTED THIS LINE
+            'exp': datetime.now(timezone.utc) + timedelta(minutes=15),
+            'jti': new_access_token_id,
+            'type': 'access'
+        }, current_app.config['SECRET_KEY'], algorithm="HS256")
+
+        return jsonify({"access_token": new_access_token}), 200
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Refresh token has expired."}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid refresh token."}), 401
+    except Exception as e:
+        logger.error(f"Failed to refresh token: {str(e)}")
+        return jsonify({"error": "Failed to refresh token.", "details": str(e)}), 500
+
+
+# --- UPDATED LOGOUT ENDPOINT ---
 @auth_bp.route('/logout', methods=['POST'])
 @require_jwt
 def logout_user():
     """
-    Endpoint to log out a user by blocklisting their token.
+    Endpoint to log out a user by blocklisting their access token 
+    and deleting their refresh token.
     """
     try:
         # The decorator has already decoded the token and put it in g.decoded_token
-        jti = g.decoded_token['jti']
+        decoded_token = g.decoded_token
         
-        # Add the token's unique ID to the blocklist
+        # Add the access token's unique ID to the blocklist
+        jti = decoded_token['jti']
         blocklisted_token = TokenBlocklist(jti=jti)
         db.session.add(blocklisted_token)
+        
+        # Delete the user's refresh token from the database
+        user_id = decoded_token['user_id']
+        RefreshToken.query.filter_by(user_id=user_id).delete()
+        
+        # Commit both changes to the database
         db.session.commit()
         
         return jsonify({"message": "Successfully logged out."}), 200
