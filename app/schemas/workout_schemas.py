@@ -18,6 +18,6 @@ class WorkoutLogSchema(BaseModel):
 
 # Schema for the workout plan generation request
 class GenerateWorkoutPlanSchema(BaseModel):
-    user_id: int
+    # user_id: int
     fitnessLevel: Literal['beginner', 'intermediate', 'advanced']
     equipment: Literal['bodyweight only', 'Home gym', 'Gym access']

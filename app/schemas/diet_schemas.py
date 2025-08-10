@@ -27,7 +27,7 @@ class DietLogSchema(BaseModel):
         return value
 
 class GenerateDietPlanSchema(BaseModel):
-    user_id: int
+    # user_id: int
     activityLevel: Literal['sedentary', 'lightlyActive', 'moderatelyActive', 'veryActive', 'extraActive']
     diet_type: Literal['veg', 'non-veg']
     budget: Optional[str] = None

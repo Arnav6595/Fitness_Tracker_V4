@@ -137,12 +137,9 @@ components:
     GenerateDietPlan:
       type: object
       required:
-        - user_id
         - activityLevel
         - diet_type
       properties:
-        user_id:
-          type: integer
         activityLevel:
           type: string
           enum: [sedentary, lightlyActive, moderatelyActive, veryActive, extraActive]
@@ -189,12 +186,9 @@ components:
     GenerateWorkoutPlan:
       type: object
       required:
-        - user_id
         - fitnessLevel
         - equipment
       properties:
-        user_id:
-          type: integer
         fitnessLevel:
           type: string
           enum: [beginner, intermediate, advanced]
@@ -319,7 +313,10 @@ paths:
   /diet/generate-plan:
     post:
       tags: [Diet]
-      summary: Generate a new diet plan for a user
+      summary: Generate a new diet plan for myself
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -390,7 +387,10 @@ paths:
   /workout/generate-plan:
     post:
       tags: [Workout]
-      summary: Generate a new workout plan for a user
+      summary: Generate a new workout plan for myself
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
       requestBody:
         required: true
         content:

@@ -13,6 +13,7 @@ workout_bp = Blueprint('workout_bp', __name__)
 # This route remains unchanged as it's a B2B client action
 @workout_bp.route('/generate-plan', methods=['POST'])
 @require_api_key
+@require_jwt
 def generate_workout_plan():
     raw_data = request.get_json()
     try:
@@ -20,9 +21,7 @@ def generate_workout_plan():
     except ValidationError as e:
         return jsonify({"error": "Invalid input", "details": e.errors()}), 400
 
-    user = User.query.filter_by(id=data.user_id, client_id=g.client.id).first_or_404(
-        description="User not found or does not belong to this client."
-    )
+    user = g.current_user
     
     try:
         gemini_api_key = current_app.config.get('GEMINI_API_KEY')
