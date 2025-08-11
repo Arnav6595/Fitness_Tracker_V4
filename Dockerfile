@@ -21,6 +21,9 @@ RUN chmod +x entrypoint.sh
 # Copy the rest of the application code into the container
 COPY . .
 
+# ADD THIS LINE: Copy the template to ensure .env always exists in the image
+COPY .env.example .env
+
 # Expose the port that Gunicorn will run on
 EXPOSE 5000
 
