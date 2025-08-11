@@ -44,7 +44,8 @@ def create_app(test_config=None):
     origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5173').split(',')
     origins = [
         "http://localhost:5173",
-        "https://my-fit-app.vercel.app" 
+        "https://my-fit-app.vercel.app", 
+        "https://fitness-tracker-v4.vercel.app"
     ]
     
     CORS(app,
