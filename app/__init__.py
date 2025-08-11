@@ -42,10 +42,14 @@ def create_app(test_config=None):
     # Get allowed origins from an environment variable.
     # Default to the standard Vite dev server URL if the variable is not set.
     origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5173').split(',')
+    origins = [
+        "http://localhost:5173",
+        "https://your-live-frontend.com" 
+    ]
+    
     CORS(app,
-     resources={r"/api/*": {"origins": origins}},
-     allow_headers=["Authorization", "Content-Type", "X-API-Key"],
-     supports_credentials=True
+         resources={r"/api/*": {"origins": origins}},
+         allow_headers=["Authorization", "Content-Type", "X-API-Key"]
     )
     # -------------------------
 
