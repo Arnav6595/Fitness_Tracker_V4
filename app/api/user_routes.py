@@ -17,5 +17,16 @@ def get_my_profile():
         "name": user.name,
         "email": user.email,
         "age": user.age,
-        "fitness_goals": user.fitness_goals
+        "gender": user.gender,
+        "phone_number": user.phone_number,
+        "height_cm": user.height_cm,
+        "weight_kg": user.weight_kg,
+        "fitness_goals": user.fitness_goals,
+        "workouts_per_week": user.workouts_per_week,
+        "workout_duration": user.workout_duration,
+        "sleep_hours": user.sleep_hours,
+        "stress_level": user.stress_level,
+        "disliked_foods": user.disliked_foods,
+        "allergies": user.allergies,
+        "health_conditions": user.health_conditions
     })
