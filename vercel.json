@@ -2,6 +2,10 @@
   "version": 2,
   "builds": [
     {
+      "src": "app/static/**/*",
+      "use": "@vercel/static"
+    },
+    {
       "src": "api/index.py",
       "use": "@vercel/python"
     }
@@ -19,12 +23,20 @@
       "status": 204
     },
     {
+      "src": "/static/(.*)",
+      "dest": "/app/static/$1"
+    },
+    {
       "src": "/api/(.*)",
       "headers": {
         "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Origin": "*"
       },
       "dest": "/api/index.py"
+    },
+    {
+      "src": "/",
+      "destination": "/api/docs"
     }
   ]
 }
