@@ -36,7 +36,8 @@
     },
     {
       "src": "/",
-      "destination": "/api/docs"
+      "status": 307,
+      "headers": { "Location": "/api/docs" }
     }
   ]
 }
