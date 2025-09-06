@@ -41,14 +41,12 @@ def create_app(test_config=None):
     # --- 2. CONFIGURE CORS ---
     # Get allowed origins from an environment variable.
     # Default to the standard Vite dev server URL if the variable is not set.
-    origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5173').split(',')
     origins = [
         "http://localhost:5173",
         "http://localhost:3000",
         "https://my-fit-app.vercel.app", 
         "https://fitness-tracker-v4.vercel.app",
-        "https://gym-project-pied-eta.vercel.app",
-        "*"  # Temporarily allow all origins for testing
+        "https://gym-project-pied-eta.vercel.app"
     ]
     
     CORS(app,
