@@ -39,8 +39,7 @@ def create_app(test_config=None):
     app = Flask(__name__)
 
     # --- 2. CONFIGURE CORS ---
-    # Get allowed origins from an environment variable.
-    # Default to the standard Vite dev server URL if the variable is not set.
+    # Define allowed origins
     origins = [
         "http://localhost:5173",
         "http://localhost:3000",
@@ -52,7 +51,8 @@ def create_app(test_config=None):
     CORS(app,
          resources={r"/api/*": {"origins": origins}},
          allow_headers=["Authorization", "Content-Type", "X-API-Key", "x-api-key"],
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         supports_credentials=True
     )
     # -------------------------
 
