@@ -44,13 +44,17 @@ def create_app(test_config=None):
     origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5173').split(',')
     origins = [
         "http://localhost:5173",
+        "http://localhost:3000",
         "https://my-fit-app.vercel.app", 
-        "https://fitness-tracker-v4.vercel.app"
+        "https://fitness-tracker-v4.vercel.app",
+        "https://gym-project-pied-eta.vercel.app",
+        "*"  # Temporarily allow all origins for testing
     ]
     
     CORS(app,
          resources={r"/api/*": {"origins": origins}},
-         allow_headers=["Authorization", "Content-Type", "X-API-Key"]
+         allow_headers=["Authorization", "Content-Type", "X-API-Key", "x-api-key"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     )
     # -------------------------
 
