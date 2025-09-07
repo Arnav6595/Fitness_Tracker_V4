@@ -108,6 +108,56 @@ components:
         health_conditions:
           type: string
           example: "None"
+    # --- ADDED THIS SCHEMA DEFINITION ---
+    UserProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Priya Sharma"
+        age:
+          type: integer
+          example: 30
+        gender:
+          type: string
+          enum: [Male, Female, Other]
+        email:
+          type: string
+          format: email
+          example: "priya.sharma@example.com"
+        phone_number:
+          type: string
+          example: "+919876543210"
+        weight_kg:
+          type: number
+          example: 61.5
+        height_cm:
+          type: number
+          example: 160
+        fitness_goals:
+          type: string
+          example: "Maintain weight and build strength"
+        workouts_per_week:
+          type: string
+          example: "4-5"
+        workout_duration:
+          type: integer
+          example: 60
+        sleep_hours:
+          type: string
+          example: "8"
+        stress_level:
+          type: string
+          enum: [low, medium, high]
+        disliked_foods:
+          type: string
+          example: "Okra, Mushrooms"
+        allergies:
+          type: string
+          example: "None"
+        health_conditions:
+          type: string
+          example: "None"
     Macros:
       type: object
       properties:
@@ -310,6 +360,26 @@ paths:
           description: The current user's profile data.
         '401':
           description: Authentication error (missing token, expired, etc.)
+    # --- ADDED THIS ENTIRE 'put' SECTION ---
+    put:
+      tags: [User]
+      summary: Update my profile
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+      responses:
+        '200':
+          description: Profile updated successfully
+        '400':
+          description: Invalid input
+        '401':
+          description: Authentication error
   /diet/generate-plan:
     post:
       tags: [Diet]

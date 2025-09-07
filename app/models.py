@@ -75,7 +75,30 @@ class User(db.Model):
     achievements = db.relationship('Achievement', back_populates='author', lazy=True, cascade="all, delete-orphan")
     diet_plans = db.relationship('DietPlan', back_populates='author', lazy=True, cascade="all, delete-orphan")
     refresh_tokens = db.relationship('RefreshToken', back_populates='user', cascade='all, delete-orphan')
-    # --- ADDED PASSWORD HELPER METHODS ---
+
+    # --- ADDED to_dict METHOD ---
+    def to_dict(self):
+        """Creates a dictionary representation of a User."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email,
+            "age": self.age,
+            "gender": self.gender,
+            "phone_number": self.phone_number,
+            "height_cm": self.height_cm,
+            "weight_kg": self.weight_kg,
+            "fitness_goals": self.fitness_goals,
+            "workouts_per_week": self.workouts_per_week,
+            "workout_duration": self.workout_duration,
+            "sleep_hours": self.sleep_hours,
+            "stress_level": self.stress_level,
+            "disliked_foods": self.disliked_foods,
+            "allergies": self.allergies,
+            "health_conditions": self.health_conditions
+        }
+    
+    # --- PASSWORD HELPER METHODS ---
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -131,7 +154,7 @@ class DietLog(db.Model):
 
     def to_dict(self):
         return {
-            'id': self.id, 'user_id': self.user_id, 'meal_name': self.meal_name,
+            'meal_name': self.meal_name,
             'food_items': self.food_items, 'calories': self.calories,
             'protein_g': self.protein_g, 'carbs_g': self.carbs_g, 'fat_g': self.fat_g,
             'date': self.date.isoformat()
@@ -155,7 +178,6 @@ class DietPlan(db.Model):
 
     def to_dict(self):
         return {
-            'id': self.id, 'user_id': self.user_id,
             'created_at': self.created_at.isoformat(),
             'generated_plan': self.generated_plan
         }
@@ -179,7 +201,7 @@ class WorkoutLog(db.Model):
 
     def to_dict(self):
         return {
-            'id': self.id, 'user_id': self.user_id, 'name': self.name,
+            'name': self.name,
             'date': self.date.isoformat(),
             'exercises': [exercise.to_dict() for exercise in self.exercises]
         }
@@ -200,7 +222,7 @@ class ExerciseEntry(db.Model):
 
     def to_dict(self):
         return {
-            'id': self.id, 'name': self.name, 'sets': self.sets,
+            'name': self.name, 'sets': self.sets,
             'reps': self.reps, 'weight': self.weight
         }
 
@@ -222,7 +244,6 @@ class WeightEntry(db.Model):
 
     def to_dict(self):
         return {
-            'id': self.id, 'user_id': self.user_id,
             'weight_kg': self.weight_kg, 'date': self.date.isoformat()
         }
 
@@ -247,7 +268,7 @@ class MeasurementLog(db.Model):
 
     def to_dict(self):
         return {
-            'id': self.id, 'user_id': self.user_id, 'waist_cm': self.waist_cm,
+            'waist_cm': self.waist_cm,
             'chest_cm': self.chest_cm, 'arms_cm': self.arms_cm,
             'hips_cm': self.hips_cm, 'date': self.date.isoformat()
         }
@@ -270,7 +291,6 @@ class WorkoutPlan(db.Model):
 
     def to_dict(self):
         return {
-            'id': self.id, 'user_id': self.user_id,
             'created_at': self.created_at.isoformat(),
             'generated_plan': self.generated_plan
         }
@@ -294,7 +314,7 @@ class Achievement(db.Model):
 
     def to_dict(self):
         return {
-            'id': self.id, 'user_id': self.user_id, 'name': self.name,
+            'name': self.name,
             'description': self.description, 'unlocked_at': self.unlocked_at.isoformat()
         }
 
