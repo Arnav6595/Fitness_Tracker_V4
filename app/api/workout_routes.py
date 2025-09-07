@@ -94,3 +94,28 @@ def log_workout():
 def get_my_workout_history():
     logs = WorkoutLog.query.filter_by(user_id=g.current_user.id).order_by(WorkoutLog.date.desc()).all()
     return jsonify([log.to_dict() for log in logs]), 200
+
+# --- NEW ROUTE TO FETCH THE LATEST WORKOUT PLAN ---
+@workout_bp.route('/plan/latest/me', methods=['GET'])
+@require_jwt
+def get_my_latest_workout_plan():
+    """
+    Fetches the most recent workout plan for the authenticated user.
+    """
+    try:
+        # Query the database for the latest plan created for the current user,
+        # ordered by creation date.
+        latest_plan = WorkoutPlan.query.filter_by(
+            user_id=g.current_user.id
+        ).order_by(WorkoutPlan.created_at.desc()).first()
+
+        # If no plan is found for the user, return a 404 error.
+        if not latest_plan:
+            return jsonify({"error": "No workout plan found for this user."}), 404
+
+        # If a plan is found, convert it to a dictionary and return it.
+        return jsonify(latest_plan.to_dict()), 200
+
+    except Exception as e:
+        # Handle any other unexpected errors.
+        return jsonify({"error": "An error occurred while retrieving the workout plan.", "details": str(e)}), 500

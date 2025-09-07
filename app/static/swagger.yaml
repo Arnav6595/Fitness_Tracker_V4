@@ -432,6 +432,20 @@ paths:
           description: A list of my workout logs
         '401':
           description: Authentication error
+  /workout/plan/latest/me:
+    get:
+      tags: [Workout]
+      summary: Get my latest workout plan
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: My latest workout plan
+        '401':
+          description: Authentication error
+        '404':
+          description: No workout plan found for me
   /progress/weekly-report/me:
     get:
       tags: [Progress]
