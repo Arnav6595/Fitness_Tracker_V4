@@ -564,6 +564,18 @@ paths:
           description: Measurements logged successfully
         '400':
           description: Invalid input
+  /progress/measurements/me:
+    get:
+      tags: [Progress]
+      summary: Get my measurement history
+      security:
+        - ApiKeyAuth: []
+        - BearerAuth: []
+      responses:
+        '200':
+          description: A list of my measurement logs
+        '401':
+          description: Authentication error
   /progress/weight/me:
     get:
       tags: [Progress]

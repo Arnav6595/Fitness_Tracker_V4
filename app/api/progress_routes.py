@@ -81,3 +81,16 @@ def log_measurements():
 def get_my_weight_history():
     history = WeightEntry.query.filter_by(user_id=g.current_user.id).order_by(WeightEntry.date.asc()).all()
     return jsonify([entry.to_dict() for entry in history]), 200
+
+# --- ADD THIS NEW ROUTE ---
+@progress_bp.route('/measurements/me', methods=['GET'])
+@require_jwt
+def get_my_measurement_history():
+    """
+    Fetches the measurement history for the authenticated user.
+    """
+    try:
+        history = MeasurementLog.query.filter_by(user_id=g.current_user.id).order_by(MeasurementLog.date.asc()).all()
+        return jsonify([entry.to_dict() for entry in history]), 200
+    except Exception as e:
+        return jsonify({"error": "An error occurred while retrieving measurement history.", "details": str(e)}), 500
