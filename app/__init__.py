@@ -43,9 +43,7 @@ def create_app(test_config=None):
     origins = [
         "http://localhost:5173",
         "http://localhost:3000",
-        "https://my-fit-app.vercel.app", 
-        "https://fitness-tracker-v4.vercel.app",
-        "https://gym-project-pied-eta.vercel.app"
+        "https://armour-zone.vercel.app/"
     ]
     
     CORS(app,
